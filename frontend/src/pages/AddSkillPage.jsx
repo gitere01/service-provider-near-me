@@ -1,9 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../client";
-import FetchSkillPage from "./FetchSkillPage";
 import TopNavBar from "../components/TopNavBar";
 import { v4 as uuidv4 } from "uuid";
-import LocationSelector from "../components/LocationSelector";
 
 const AddSkillPage = () => {
   const [user, setUser] = useState(null);
@@ -19,10 +17,8 @@ const AddSkillPage = () => {
   const [gender, setGender] = useState("");
   const [expectedSalary, setExpectedSalary] = useState("");
   const [currency, setCurrency] = useState("");
-  const [category_name, setCategory_name] = useState("");
   const [image, setImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  
   const [location, setLocation] = useState({
     country: '',
     city: '',
@@ -34,23 +30,23 @@ const AddSkillPage = () => {
   const [notification, setNotification] = useState("");
   const [experienceYear, setExperienceYear] = useState("");
   const [error, setError] = useState("");
-  const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
 
-
   useEffect(() => {
     fetchUser();
-    fetchCategories();  // Fetch categories on component mount
+    fetchCategories();
   }, []);
+
   const fetchUser = async () => {
     const { data, error } = await supabase.auth.getSession();
     if (error) {
       console.error("Error fetching user:", error);
       return;
     }
-    setUser(data.user);
+    setUser(data.session?.user ?? null);
   };
+
   const fetchCategories = async () => {
     const { data, error } = await supabase.from("categories").select("category_id, category_name");
     if (error) {
@@ -60,17 +56,13 @@ const AddSkillPage = () => {
     setCategories(data);
   };
 
-
-
   const africanCurrencies = [
     { code: "KES", name: "Kenyan Shilling" },
     { code: "TZS", name: "Tanzanian Shilling" },
     { code: "UGX", name: "Ugandan Shilling" },
   ];
-  const defaultLanguages = ["English", "Kiswahili"];
 
-  
-  
+  const defaultLanguages = ["English", "Kiswahili"];
 
   const handleFileUpload = async (file) => {
     try {
@@ -78,37 +70,35 @@ const AddSkillPage = () => {
       if (userError || !userData) {
         throw new Error("User not found or authentication error");
       }
-  
-      const blob = new Blob([file], { type: file.type });
+
       const filename = `${Date.now()}-${file.name}`;
-  
       const { error: uploadError } = await supabase.storage
         .from("images")
-        .upload(filename, blob, {
+        .upload(filename, file, {
           cacheControl: "3600",
           contentType: file.type,
           upsert: false,
         });
-  
+
       if (uploadError) {
         throw uploadError;
       }
-  
+
       const { data } = await supabase.storage
         .from("images")
         .getPublicUrl(filename);
-  
-      if (!data || !data.publicUrl) {
+
+      if (!data?.publicUrl) {
         throw new Error("Failed to get public URL");
       }
-  
+
       return data.publicUrl;
     } catch (error) {
       console.error("Error in handleFileUpload:", error);
       return null;
     }
   };
-  
+
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -119,7 +109,7 @@ const AddSkillPage = () => {
       }
     }
   };
-  
+
   const handleWorkImagesChange = async (e) => {
     const files = Array.from(e.target.files);
     const imageUrls = await Promise.all(
@@ -128,10 +118,10 @@ const AddSkillPage = () => {
         return imageUrl;
       })
     );
-  
+
     setWorkImages((prevImages) => [...prevImages, ...imageUrls.filter(Boolean)].slice(0, 6));
   };
-  
+
   const handleRemoveWorkImage = (index) => {
     setWorkImages((prevImages) => prevImages.filter((_, i) => i !== index));
   };
@@ -144,9 +134,8 @@ const AddSkillPage = () => {
         throw new Error("Please upload an image");
       }
 
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
-      if (userError || !userData.user) {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
         throw new Error("User not found");
       }
 
@@ -178,7 +167,6 @@ const AddSkillPage = () => {
             phone_number: phoneNumber,
             vetted: false,
             work_images: JSON.stringify(workImages),
-            
           },
         ]);
 
@@ -199,17 +187,12 @@ const AddSkillPage = () => {
       setGender("");
       setExperienceYear("");
       setExpectedSalary("");
-      setLocation({
-        country: '',
-        city: '',
-        custom_location: ''
-      });
+      setLocation({ country: '', city: '', custom_location: '' });
       setCurrency("");
       setImage(null);
       setImageFile(null);
       setNote("");
       setPhoneNumber("");
-
       setWorkImages([]);
     } catch (error) {
       setError(error.message);
@@ -221,7 +204,6 @@ const AddSkillPage = () => {
   return (
     <div>
       <TopNavBar />
-      
 
       <div className="max-w-2xl mx-auto mt-8">
         <form onSubmit={handleSubmit}>
@@ -234,10 +216,7 @@ const AddSkillPage = () => {
           {error && <p className="text-red-500 mb-4">{error}</p>}
 
           <div className="mb-4">
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
               Your name or business name
             </label>
             <input
@@ -250,10 +229,7 @@ const AddSkillPage = () => {
           </div>
 
           <div className="mb-4">
-            <label
-              htmlFor="idNumber"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="idNumber" className="block text-sm font-medium text-gray-700">
               Your National ID Number (provide if you want to be verified)
             </label>
             <input
@@ -266,10 +242,7 @@ const AddSkillPage = () => {
           </div>
 
           <div className="mb-4">
-            <label
-              htmlFor="passportNumber"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="passportNumber" className="block text-sm font-medium text-gray-700">
               Your Passport Number (provide if you want to be verified)
             </label>
             <input
@@ -280,11 +253,9 @@ const AddSkillPage = () => {
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
             />
           </div>
+
           <div className="mb-4">
-            <label
-              htmlFor="category_name"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="category_name" className="block text-sm font-medium text-gray-700">
               Category
             </label>
             <select
@@ -292,26 +263,22 @@ const AddSkillPage = () => {
               value={selectedCategory.category_name}
               onChange={(e) => {
                 const selected = categories.find(cat => cat.category_name === e.target.value);
-                setSelectedCategory({ category_name: selected.category_name, category_id: selected.category_id });
+                setSelectedCategory({ category_name: selected?.category_name || "", category_id: selected?.category_id || "" });
               }}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
             >
               <option value="">Select a category</option>
-              {categories.map((category) => (
-                <option key={category.category_id} value={category.category_name}>
-                  {category.category_name}
+              {categories.map((cat) => (
+                <option key={cat.category_id} value={cat.category_name}>
+                  {cat.category_name}
                 </option>
               ))}
             </select>
           </div>
 
-
           <div className="mb-4">
-            <label
-              htmlFor="education"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Your level of Education
+            <label htmlFor="education" className="block text-sm font-medium text-gray-700">
+              Education
             </label>
             <input
               type="text"
@@ -323,45 +290,24 @@ const AddSkillPage = () => {
           </div>
 
           <div className="mb-4">
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Describe your service
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Description
             </label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
-            ></textarea>
+              rows="4"
+            />
           </div>
-          <div className="mb-4">
-  <label
-    htmlFor="experienceYear"
-    className="block text-sm font-medium text-gray-700"
-  >
-    Years of Experience
-  </label>
-  <input
-    type="number"
-    id="experienceYear"
-    value={experienceYear}
-    onChange={(e) => setExperienceYear(e.target.value)}
-    className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
-  />
-</div>
-
 
           <div className="mb-4">
-            <label
-              htmlFor="age"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="age" className="block text-sm font-medium text-gray-700">
               Age
             </label>
             <input
-              type="text"
+              type="number"
               id="age"
               value={age}
               onChange={(e) => setAge(e.target.value)}
@@ -370,22 +316,18 @@ const AddSkillPage = () => {
           </div>
 
           <div className="mb-4">
-            <label
-              htmlFor="language"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="language" className="block text-sm font-medium text-gray-700">
               Language
             </label>
             <select
               id="language"
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
             >
-              <option value="">Select your language</option>
-              {defaultLanguages.map((lang) => (
-                
-                <option key={lang} value={lang}>
+              <option value="">Select a language</option>
+              {defaultLanguages.map((lang, index) => (
+                <option key={index} value={lang}>
                   {lang}
                 </option>
               ))}
@@ -393,89 +335,37 @@ const AddSkillPage = () => {
           </div>
 
           <div className="mb-4">
-            <label
-              htmlFor="gender"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
               Gender
             </label>
             <select
               id="gender"
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
             >
-              <option value="">select your gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
+              <option value="">Select gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
             </select>
           </div>
+
           <div className="mb-4">
-            <label htmlFor="country" className="block text-sm font-medium text-gray-700">
-              Country
+            <label htmlFor="experienceYear" className="block text-sm font-medium text-gray-700">
+              Years of Experience
             </label>
             <input
-              type="text"
-              id="country"
-              value={location.country}
-              onChange={(e) => setLocation({ ...location, country: e.target.value })}
+              type="number"
+              id="experienceYear"
+              value={experienceYear}
+              onChange={(e) => setExperienceYear(e.target.value)}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
             />
           </div>
 
           <div className="mb-4">
-            <label htmlFor="city" className="block text-sm font-medium text-gray-700">
-              City
-            </label>
-            <input
-              type="text"
-              id="city"
-              value={location.city}
-              onChange={(e) => setLocation({ ...location, city: e.target.value })}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="custom_location" className="block text-sm font-medium text-gray-700">
-              Custom Location
-            </label>
-            <input
-              type="text"
-              id="custom_location"
-              value={location.custom_location}
-              onChange={(e) => setLocation({ ...location, custom_location: e.target.value })}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              htmlFor="currency"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Currency
-            </label>
-            <select
-              id="currency"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
-            >
-              <option value="">Select your currency</option>
-              {africanCurrencies.map((currency) => (
-                <option key={currency.code} value={currency.code}>
-                  {currency.name}
-                </option>
-              ))}
-            </select>
-          </div>
-           
-          <div className="mb-4">
-            <label
-              htmlFor="expectedSalary"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="expectedSalary" className="block text-sm font-medium text-gray-700">
               Expected Salary
             </label>
             <input
@@ -487,93 +377,132 @@ const AddSkillPage = () => {
             />
           </div>
 
-          
-          
           <div className="mb-4">
-
-            <label
-              htmlFor="image"
-              className="block text-sm font-medium text-gray-700"
+            <label htmlFor="currency" className="block text-sm font-medium text-gray-700">
+              Currency
+            </label>
+            <select
+              id="currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
             >
-              Profile(only 1 image required)
+              <option value="">Select a currency</option>
+              {africanCurrencies.map((cur) => (
+                <option key={cur.code} value={cur.code}>
+                  {cur.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="image" className="block text-sm font-medium text-gray-700">
+              Profile Image
             </label>
             <input
               type="file"
               id="image"
-              accept="image/*"
               onChange={handleImageChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+              className="mt-1 block w-full text-sm text-gray-500"
             />
             {image && (
-              <img
-                src={image}
-                alt="Uploaded"
-                className="mt-2 h-40 w-40 object-cover"
-              />
+              <img src={image} alt="Profile" className="mt-4 w-32 h-32 object-cover rounded-full" />
             )}
           </div>
 
           <div className="mb-4">
-            <label
-              htmlFor="workImages"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Work Images (only 6 max image required)
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+              Location
+            </label>
+            <input
+              type="text"
+              id="country"
+              placeholder="Country"
+              value={location.country}
+              onChange={(e) => setLocation({ ...location, country: e.target.value })}
+              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+            />
+            <input
+              type="text"
+              id="city"
+              placeholder="City"
+              value={location.city}
+              onChange={(e) => setLocation({ ...location, city: e.target.value })}
+              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+            />
+            <input
+              type="text"
+              id="custom_location"
+              placeholder="Custom Location"
+              value={location.custom_location}
+              onChange={(e) => setLocation({ ...location, custom_location: e.target.value })}
+              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="note" className="block text-sm font-medium text-gray-700">
+              Additional Note
+            </label>
+            <textarea
+              id="note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+              rows="2"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="workImages" className="block text-sm font-medium text-gray-700">
+              Work Images
             </label>
             <input
               type="file"
               id="workImages"
-              accept="image/*"
               multiple
               onChange={handleWorkImagesChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
+              className="mt-1 block w-full text-sm text-gray-500"
             />
-            <div className="mt-2 flex flex-wrap">
-              {workImages.map((image, index) => (
-                <div key={index} className="relative mr-2 mb-2">
-                  <img
-                    src={image}
-                    alt="Work"
-                    className="h-20 w-20 object-cover"
-                  />
+            <div className="mt-4">
+              {workImages.map((url, index) => (
+                <div key={index} className="relative inline-block mr-4">
+                  <img src={url} alt={`Work Image ${index}`} className="w-32 h-32 object-cover rounded-md" />
                   <button
                     type="button"
                     onClick={() => handleRemoveWorkImage(index)}
                     className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
                   >
-                    x
+                    &times;
                   </button>
                 </div>
               ))}
             </div>
           </div>
+
           <div className="mb-4">
-            <label
-              htmlFor="expectedSalary"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Phonenumber
+            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+              Phone Number
             </label>
             <input
               type="text"
-              id="expectedSalary"
+              id="phoneNumber"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 focus:ring-indigo-500"
             />
           </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
-            >
-              add service
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {loading ? "Submitting..." : "Submit"}
+          </button>
         </form>
       </div>
-      <FetchSkillPage />
     </div>
   );
 };
